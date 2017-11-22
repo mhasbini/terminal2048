@@ -12,8 +12,8 @@ OnGoing Game               | Won Game                  | Game Over
 ## Installation
 
 ```
-git clone $repo
-cd $repo
+git clone https://github.com/0xbsec/terminal2048.git
+cd terminal2048
 cargo run
 ```
 
