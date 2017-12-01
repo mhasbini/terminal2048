@@ -1,6 +1,6 @@
 [root]
-name = "terminal2048"
-version = "0.1.0"
+name = "term2048"
+version = "0.0.1"
 dependencies = [
  "bincode 0.9.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.18 (registry+https://github.com/rust-lang/crates.io-index)",

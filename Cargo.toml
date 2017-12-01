@@ -1,7 +1,14 @@
 [package]
-name = "terminal2048"
+name = "term2048"
 version = "0.0.1"
 authors = ["mhasbini <mohammad.hasbini@gmail.com>"]
+readme = "README.md"
+license = "MIT"
+include = ["/README.md", "/Cargo.toml", "/src/*.rs", "/src/bin/*.rs"]
+description = "2048 game on terminal"
+
+[[bin]]
+name = "term2048"
 
 [dependencies]
 termion = "1.5.1"
