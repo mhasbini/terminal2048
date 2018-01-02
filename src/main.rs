@@ -20,7 +20,7 @@ use bincode::{serialize, deserialize, Infinite};
 use std::io::Read;
 
 #[derive(Debug)]
-struct Rgb {
+struct RGB {
     r: u8,
     g: u8,
     b: u8,
@@ -30,6 +30,17 @@ struct Rgb {
 struct Slot {
     value: usize
 }
+
+macro_rules! write_buffer {
+    ($w:expr, ) => (());
+    
+    ($w:expr, $($arg:tt)+) => {{
+        if let Err(e) = write!($w, $($arg)+) {
+            panic!("Error writing to buffer: {}", e);
+        }
+    }};
+}
+
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum Score {
@@ -67,12 +78,12 @@ impl Score {
         )
     }
     
-    fn bcolor() -> Rgb {
-        Rgb {r: 187, g: 173, b: 160}
+    fn bcolor() -> RGB {
+        RGB {r: 187, g: 173, b: 160}
     }
 
-    fn fcolor() -> Rgb {
-        Rgb {r: 238, g: 228, b: 218}
+    fn fcolor() -> RGB {
+        RGB {r: 238, g: 228, b: 218}
     }
     
     fn bc() -> String {
@@ -106,12 +117,12 @@ impl Score {
     }
     
     fn render(&self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        write!(buffer, "{}", Draw::reset_pos()).unwrap();
-        write!(buffer, "{}", style::Bold).unwrap();
+        write_buffer!(buffer, "{}", Draw::reset_pos());
+        write_buffer!(buffer, "{}", style::Bold);
 
-        write!(buffer, "{}", cursor::Down(Self::y())).unwrap();
+        write_buffer!(buffer, "{}", cursor::Down(Self::y()));
 
-        write!(buffer, 
+        write_buffer!(buffer, 
             "{c}{bc}{fc}{header}{r}\r\n{c}{bc}{fc}{footer}{r}\r\n",
             c=self.c(),
             bc=Self::bc(),
@@ -119,9 +130,9 @@ impl Score {
             r=Draw::reset(),
             header=self.header(),
             footer=self.footer()
-        ).unwrap();
+        );
 
-        write!(buffer, "{}", style::Reset).unwrap();
+        write_buffer!(buffer, "{}", style::Reset);
     }
 }
 
@@ -132,8 +143,8 @@ impl Score {
 // play 2048 from terminal
 
 trait Render {
-    fn bcolor() -> Rgb;
-    fn fcolor() -> Rgb;
+    fn bcolor() -> RGB;
+    fn fcolor() -> RGB;
     fn render(&self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>);
     fn c() -> cursor::Right;
     fn x() -> u16;
@@ -172,30 +183,27 @@ impl Math {
     }
     
     fn furthest(pos: usize, points: Vec<Slot>, direction: Direction) -> usize {
-        let mut furthest = pos;
+        let mut furthest = pos as i32;
+                
+        let (range, step) = 
+            match direction {
+                UP | LEFT => {
+                    ((0..pos).rev().collect::<Vec<usize>>(), -1)
+                },
+                DOWN | RIGHT => {
+                    (((pos+1)..4).collect::<Vec<usize>>(), 1)
+                }
+            };
         
-        match direction {
-            UP | LEFT => {
-                for t in (0..pos).rev() {
-                    if points[t].is_empty() {
-                        furthest -= 1;
-                    } else {
-                        break;
-                    }
-                }
-            },
-            DOWN | RIGHT => {
-                for t in (pos+1)..4 {
-                    if points[t].is_empty() {
-                        furthest += 1;
-                    } else {
-                        break;
-                    }
-                }
+        for t in range {
+            if points[t].is_empty() {
+                furthest += step;
+            } else {
+                break;
             }
         }
-        
-        furthest
+
+        furthest as usize
     }
 }
 
@@ -225,76 +233,76 @@ impl Slot {
         Slot {value: n}
     }
 
-    fn bcolor(&self, status: &Status) -> Rgb {
+    fn bcolor(&self, status: &Status) -> RGB {
         match *status {
             OnGoing =>
                 match self.value {
-                       0 => Rgb {r: 205, g: 193, b: 181},
-                       2 => Rgb {r: 238, g: 228, b: 218},
-                       4 => Rgb {r: 237, g: 224, b: 200},
-                       8 => Rgb {r: 242, g: 177, b: 121},
-                      16 => Rgb {r: 245, g: 149, b:  99},
-                      32 => Rgb {r: 246, g: 124, b:  95},
-                      64 => Rgb {r: 246, g:  94, b:  59},
-                     128 => Rgb {r: 237, g: 207, b: 114},
-                     256 => Rgb {r: 237, g: 204, b:  97},
-                     512 => Rgb {r: 237, g: 200, b:  80},
-                    1024 => Rgb {r: 237, g: 197, b:  63},
-                    2048 => Rgb {r: 237, g: 194, b:  46},
-                       _ => Rgb {r:  60, g:  58, b:  50},
+                       0 => RGB {r: 205, g: 193, b: 181},
+                       2 => RGB {r: 238, g: 228, b: 218},
+                       4 => RGB {r: 237, g: 224, b: 200},
+                       8 => RGB {r: 242, g: 177, b: 121},
+                      16 => RGB {r: 245, g: 149, b:  99},
+                      32 => RGB {r: 246, g: 124, b:  95},
+                      64 => RGB {r: 246, g:  94, b:  59},
+                     128 => RGB {r: 237, g: 207, b: 114},
+                     256 => RGB {r: 237, g: 204, b:  97},
+                     512 => RGB {r: 237, g: 200, b:  80},
+                    1024 => RGB {r: 237, g: 197, b:  63},
+                    2048 => RGB {r: 237, g: 194, b:  46},
+                       _ => RGB {r:  60, g:  58, b:  50},
                 },
             Over =>
                 match self.value {
-                       2 => Rgb {r: 238, g: 228, b: 219},
-                       4 => Rgb {r: 238, g: 227, b: 214},
-                       8 => Rgb {r: 239, g: 214, b: 194},
-                      16 => Rgb {r: 240, g: 206, b: 188},
-                      32 => Rgb {r: 240, g: 199, b: 186},
-                      64 => Rgb {r: 240, g: 191, b: 178},
-                     128 => Rgb {r: 238, g: 222, b: 192},
-                     256 => Rgb {r: 238, g: 221, b: 188},
-                     512 => Rgb {r: 238, g: 220, b: 184},
-                    1024 => Rgb {r: 238, g: 219, b: 180},
-                    2048 => Rgb {r: 238, g: 218, b: 177},
-                    _ => Rgb {r: 190, g: 181, b: 173},
+                       2 => RGB {r: 238, g: 228, b: 219},
+                       4 => RGB {r: 238, g: 227, b: 214},
+                       8 => RGB {r: 239, g: 214, b: 194},
+                      16 => RGB {r: 240, g: 206, b: 188},
+                      32 => RGB {r: 240, g: 199, b: 186},
+                      64 => RGB {r: 240, g: 191, b: 178},
+                     128 => RGB {r: 238, g: 222, b: 192},
+                     256 => RGB {r: 238, g: 221, b: 188},
+                     512 => RGB {r: 238, g: 220, b: 184},
+                    1024 => RGB {r: 238, g: 219, b: 180},
+                    2048 => RGB {r: 238, g: 218, b: 177},
+                    _ => RGB {r: 190, g: 181, b: 173},
                 },
             Won =>
                 match self.value {
-                    0 => Rgb {r: 220, g: 193, b: 122},
-                    2 => Rgb {r: 237, g: 211, b: 141},
-                    4 => Rgb {r: 236, g: 209, b: 132},
-                    8 => Rgb {r: 238, g: 185, b:  94},
-                   16 => Rgb {r: 239, g: 171, b:  84},
-                   32 => Rgb {r: 240, g: 159, b:  81},
-                   64 => Rgb {r: 240, g: 144, b:  65},
-                  128 => Rgb {r: 236, g: 200, b:  92},
-                  256 => Rgb {r: 236, g: 198, b:  84},
-                  512 => Rgb {r: 236, g: 196, b:  77},
-                 1024 => Rgb {r: 236, g: 195, b:  70},
-                 2048 => Rgb {r: 236, g: 193, b:  64},
-                    _ => Rgb {r: 148, g: 126, b:  57},
+                    0 => RGB {r: 220, g: 193, b: 122},
+                    2 => RGB {r: 237, g: 211, b: 141},
+                    4 => RGB {r: 236, g: 209, b: 132},
+                    8 => RGB {r: 238, g: 185, b:  94},
+                   16 => RGB {r: 239, g: 171, b:  84},
+                   32 => RGB {r: 240, g: 159, b:  81},
+                   64 => RGB {r: 240, g: 144, b:  65},
+                  128 => RGB {r: 236, g: 200, b:  92},
+                  256 => RGB {r: 236, g: 198, b:  84},
+                  512 => RGB {r: 236, g: 196, b:  77},
+                 1024 => RGB {r: 236, g: 195, b:  70},
+                 2048 => RGB {r: 236, g: 193, b:  64},
+                    _ => RGB {r: 148, g: 126, b:  57},
                 }
         }
     }
 
-    fn fcolor(&self, status: &Status) -> Rgb {
+    fn fcolor(&self, status: &Status) -> RGB {
         match *status {
             OnGoing => 
                 match self.value {
-                    0  => Rgb {r: 205, g: 193, b: 181},
-                 2 | 4 => Rgb {r: 118, g: 110, b: 101},
-                    _  => Rgb {r: 249, g: 246, b: 242},
+                    0  => RGB {r: 205, g: 193, b: 181},
+                 2 | 4 => RGB {r: 118, g: 110, b: 101},
+                    _  => RGB {r: 249, g: 246, b: 242},
                 },
             Over =>
                 match self.value {
-                    2 | 4 => Rgb {r: 206, g: 195, b: 187},
-                       _  => Rgb {r: 241, g: 233, b: 226},
+                    2 | 4 => RGB {r: 206, g: 195, b: 187},
+                       _  => RGB {r: 241, g: 233, b: 226},
                 },
             Won =>
                 match self.value {
-                    0     => Rgb {r: 220, g: 193, b: 122},
-                    2 | 4 => Rgb {r: 177, g: 152, b:  82},
-                       _  => Rgb {r: 242, g: 220, b: 153},
+                    0     => RGB {r: 220, g: 193, b: 122},
+                    2 | 4 => RGB {r: 177, g: 152, b:  82},
+                       _  => RGB {r: 242, g: 220, b: 153},
                 }
         }
     }
@@ -729,17 +737,17 @@ impl OverLap {
         Grid::y() + 5
     }
     
-    fn bcolor(&self) -> Rgb {
+    fn bcolor(&self) -> RGB {
         match *self {
             OverLap::Over => Grid::border_color(&Over),
             OverLap::Won  => Grid::border_color(&Won)
         }
     }
     
-    fn fcolor(&self) -> Rgb {
+    fn fcolor(&self) -> RGB {
         match *self {
-            OverLap::Over => Rgb {r: 119, g: 110, b: 101},
-            OverLap::Won  => Rgb {r: 249, g: 246, b: 241}
+            OverLap::Over => RGB {r: 119, g: 110, b: 101},
+            OverLap::Won  => RGB {r: 249, g: 246, b: 241}
         }
     }
     
@@ -759,30 +767,30 @@ impl OverLap {
     }
 
     fn render(&self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        write!(buffer, "{}", self.bc()).unwrap();
-        write!(buffer, "{}", self.fc()).unwrap();
-        write!(buffer, "{}", cursor::Goto(self.x(), Self::y())).unwrap();
-        write!(buffer, "{}", style::Bold).unwrap();
+        write_buffer!(buffer, "{}", self.bc());
+        write_buffer!(buffer, "{}", self.fc());
+        write_buffer!(buffer, "{}", cursor::Goto(self.x(), Self::y()));
+        write_buffer!(buffer, "{}", style::Bold);
         
         match *self {
             OverLap::Over => {
-                write!(buffer, "𝗚𝗔𝝡𝗘 𝗢𝗩𝗘𝗥!").unwrap();
-                write!(buffer, "\r\n\r\n\r\n\r\n{c}        𝗣𝗿𝗲𝘀𝘀 `𝗿` 𝘁𝗼 𝗽𝗹𝗮𝘆 𝗮𝗴𝗮𝗶𝗻.", c=self.c()).unwrap();
+                write_buffer!(buffer, "𝗚𝗔𝝡𝗘 𝗢𝗩𝗘𝗥!");
+                write_buffer!(buffer, "\r\n\r\n\r\n\r\n{c}        𝗣𝗿𝗲𝘀𝘀 `𝗿` 𝘁𝗼 𝗽𝗹𝗮𝘆 𝗮𝗴𝗮𝗶𝗻.", c=self.c());
             },
             OverLap::Won  => {
-                write!(buffer, "🎊  You Win! 🎊").unwrap();
-                write!(
+                write_buffer!(buffer, "🎊  You Win! 🎊");
+                write_buffer!(
                     buffer,
                     "\r\n\r\n\r\n\r\n{c}{f}{b}Keep going{rf}{rb}: press `𝗰`\r\n\r\n\r\n\r\n{c}{f}{b}Try again{rf}{rb}: press `𝗿`",
                     c=self.c(), b=color::Bg(color::Rgb(142, 121, 103)), f=color::Bg(color::Rgb(249, 246, 242)),
                     rb=self.bc(),
                     rf=self.fc()
-                ).unwrap();
+                );
             }
         }
         
-        write!(buffer, "{}", Draw::reset()).unwrap();
-        write!(buffer, "{}", style::Reset).unwrap();
+        write_buffer!(buffer, "{}", Draw::reset());
+        write_buffer!(buffer, "{}", style::Reset);
     }
 }
 
@@ -807,14 +815,14 @@ impl Grid {
     }
 
     fn render(&self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        write!(buffer, "{}", Draw::reset_pos()).unwrap();
+        write_buffer!(buffer, "{}", Draw::reset_pos());
 
-        write!(buffer, "{}", cursor::Down(Self::y())).unwrap();
-        write!(buffer, "{}", style::Bold).unwrap();
+        write_buffer!(buffer, "{}", cursor::Down(Self::y()));
+        write_buffer!(buffer, "{}", style::Bold);
 
-        write!(buffer, "{}", self.body()).unwrap();
+        write_buffer!(buffer, "{}", self.body());
 
-        write!(buffer, "{}", style::Reset).unwrap();
+        write_buffer!(buffer, "{}", style::Reset);
     }
 
     fn c() -> cursor::Right {
@@ -859,11 +867,11 @@ impl Grid {
 )
     }
     
-    fn border_color(status: &Status) -> Rgb {
+    fn border_color(status: &Status) -> RGB {
         match *status {
-            OnGoing => Rgb {r: 187, g: 173, b: 161},
-            Over => Rgb {r: 224, g: 213, b: 203},
-            Won => Rgb {r: 211, g: 183, b: 112},
+            OnGoing => RGB {r: 187, g: 173, b: 161},
+            Over => RGB {r: 224, g: 213, b: 203},
+            Won => RGB {r: 211, g: 183, b: 112},
         }
     }
 
@@ -895,7 +903,7 @@ enum Status {
 
 use Status::*;
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Clone)]
 struct Game {
     state: State,
     current_score: Score,
@@ -951,17 +959,24 @@ impl Game {
     }
 
     fn render(&self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) {
-        write!(buffer, "{}", Draw::reset()).unwrap();
-        write!(buffer, "{}", termion::clear::All).unwrap();
+        write_buffer!(buffer, "{}", Draw::reset());
+        write_buffer!(buffer, "{}", termion::clear::All);
 
         self.current_score.render(buffer);
         self.best_score.render(buffer);
 
         self.state.render(buffer, self.status());
+
+        buffer.flush().unwrap();
     }
     
-    fn handle_move(self, direction: Direction) -> Game {
-        let (new_state, added_score) = self.state.handle_move(direction);
+    fn handle_move(self, direction: Direction, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) -> Game {
+        let (new_state, added_score) = self.state.clone().handle_move(direction);
+        
+        if new_state == self.state {
+            return self.clone();
+        }
+
         let current_score = self.current_score.add(added_score);
 
         let (current, best) = (current_score.value(), self.best_score.value());
@@ -980,6 +995,8 @@ impl Game {
         };
 
         game.save();
+
+        game.render(buffer);
 
         game
     }
@@ -1029,31 +1046,27 @@ fn main() {
 
     let mut game = Game::new();
 
-    write!(screen, "{}", ToAlternateScreen).unwrap();
-    write!(screen, "{}", cursor::Hide).unwrap();
+    write_buffer!(screen, "{}", ToAlternateScreen);
+    write_buffer!(screen, "{}", cursor::Hide);
 
     if game.status() == Status::Over {
         game = game.reset();
     }
     
     game.render(&mut screen);
-    screen.flush().unwrap();
 
     for c in stdin.keys() {
         match c.unwrap() {
             Key::Char('q') | Key::Ctrl('c') => break,
-            Key::Char('r') => {game = game.reset()},
-            Key::Char('c') => {game = game.keep_going()},
-            Key::Left  | Key::Char('a') => { game = game.handle_move(Direction::LEFT)},
-            Key::Right | Key::Char('d') => { game = game.handle_move(Direction::RIGHT)},
-            Key::Up    | Key::Char('w') => { game = game.handle_move(Direction::UP)},
-            Key::Down  | Key::Char('s') => { game = game.handle_move(Direction::DOWN)},
+            Key::Char('r') => {game = game.reset(); game.render(&mut screen);},
+            Key::Char('c') => {game = game.keep_going(); game.render(&mut screen);},
+            Key::Left  | Key::Char('a') => { game = game.handle_move(Direction::LEFT, &mut screen)},
+            Key::Right | Key::Char('d') => { game = game.handle_move(Direction::RIGHT, &mut screen)},
+            Key::Up    | Key::Char('w') => { game = game.handle_move(Direction::UP, &mut screen)},
+            Key::Down  | Key::Char('s') => { game = game.handle_move(Direction::DOWN, &mut screen)},
             _              => {},
         }
-
-        game.render(&mut screen);
-        screen.flush().unwrap();
     }
 
-    write!(screen, "{}", termion::cursor::Show).unwrap();
+    write_buffer!(screen, "{}", termion::cursor::Show);
 }
