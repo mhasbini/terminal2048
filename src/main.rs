@@ -18,6 +18,7 @@ use termion::raw::IntoRawMode;
 use std::fs::File;
 use bincode::{serialize, deserialize, Infinite};
 use std::io::Read;
+use std::num::Wrapping;
 
 #[derive(Debug)]
 struct RGB {
@@ -102,6 +103,9 @@ impl Score {
     }
 
     fn y() -> u16 {
+        // println!("Grid::y(): {:?}", Grid::y());
+        // println!("wrapping: {:?}", (Wrapping(Grid::y()) - Wrapping(3)).0);
+        // (Wrapping(Grid::y()) - Wrapping(3)).0
         Grid::y() - 3
     }
     
@@ -807,11 +811,11 @@ impl Grid {
         }
     }
     fn x() -> u16 {
-        termion::terminal_size().unwrap().0 / 2 - 15
+        (Wrapping(termion::terminal_size().unwrap().0) / Wrapping(2) - Wrapping(15)).0
     }
 
     fn y() -> u16 {
-        termion::terminal_size().unwrap().1 / 2 - 10
+        (Wrapping(termion::terminal_size().unwrap().1) / Wrapping(2) - Wrapping(10)).0
     }
 
     fn render(&self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) {
