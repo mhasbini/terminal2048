@@ -912,7 +912,8 @@ struct Game {
     state: State,
     current_score: Score,
     best_score: Score,
-    keep_going: bool
+    keep_going: bool,
+    prev: Box<Option<Game>>
 }
 
 impl Game {
@@ -928,7 +929,8 @@ impl Game {
             state: State::new(),
             current_score: Score::Current(0),
             best_score: Score::Best(0),
-            keep_going: false
+            keep_going: false,
+            prev: Box::new(None)
         }
     }
 
@@ -937,7 +939,8 @@ impl Game {
             state: State::new(),
             current_score: Score::Current(0),
             best_score: self.best_score.clone(),
-            keep_going: false
+            keep_going: false,
+            prev: Box::new(None)
         };
 
         game.save();
@@ -973,8 +976,24 @@ impl Game {
 
         buffer.flush().unwrap();
     }
+
+    fn handle_undo(self, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) -> Game {
+        if self.prev.is_none() {
+            return self.clone();
+        }
+
+        let current = self.prev.unwrap().clone();
+
+        current.save();
+
+        current.render(buffer);
+
+        current
+    }
     
     fn handle_move(self, direction: Direction, buffer: &mut termion::raw::RawTerminal<std::io::Stdout>) -> Game {
+        let prev = self.clone();
+
         let (new_state, added_score) = self.state.clone().handle_move(direction);
         
         if new_state == self.state {
@@ -995,7 +1014,8 @@ impl Game {
             state: new_state,
             current_score: current_score,
             best_score: best_score,
-            keep_going: self.keep_going
+            keep_going: self.keep_going,
+            prev: Box::new(Some(prev))
         };
 
         game.save();
@@ -1039,7 +1059,8 @@ impl Game {
             state: self.state.clone(),
             current_score: self.current_score.clone(),
             best_score: self.best_score.clone(),
-            keep_going: true
+            keep_going: true,
+            prev: self.prev.clone()
         }
     }
 }
@@ -1068,6 +1089,7 @@ fn main() {
             Key::Right | Key::Char('d') => { game = game.handle_move(Direction::RIGHT, &mut screen)},
             Key::Up    | Key::Char('w') => { game = game.handle_move(Direction::UP, &mut screen)},
             Key::Down  | Key::Char('s') => { game = game.handle_move(Direction::DOWN, &mut screen)},
+            Key::Char('z') => { game = game.handle_undo(&mut screen)},
             _              => {},
         }
     }
